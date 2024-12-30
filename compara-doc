@@ -1,0 +1,342 @@
+<html><head><base href="https://example.com/document-comparison-enhanced/" />
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Enhanced Document Comparison Tool</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap');
+
+  body {
+    font-family: 'Roboto', sans-serif;
+    margin: 0;
+    padding: 20px;
+    background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+    min-height: 100vh;
+  }
+
+  .container {
+    background-color: rgba(255, 255, 255, 0.95);
+    border-radius: 15px;
+    padding: 30px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+    max-width: 1200px;
+    margin: 0 auto;
+  }
+
+  h1, h2 {
+    text-align: center;
+    color: #333;
+    margin-bottom: 30px;
+    font-weight: 500;
+  }
+
+  .dropzone-container {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 30px;
+  }
+
+  .dropzone {
+    flex: 1;
+    border: 2px dashed #a1c4fd;
+    border-radius: 10px;
+    padding: 20px;
+    text-align: center;
+    margin: 0 10px;
+    transition: all 0.3s ease;
+    background-color: rgba(255, 255, 255, 0.7);
+    cursor: pointer;
+  }
+
+  .dropzone:hover, .dropzone.dragover {
+    background-color: rgba(161, 196, 253, 0.1);
+    transform: translateY(-5px);
+  }
+
+  .file-icon {
+    font-size: 48px;
+    margin-bottom: 10px;
+    color: #a1c4fd;
+  }
+
+  .button {
+    display: inline-block;
+    padding: 10px 20px;
+    background-color: #a1c4fd;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-size: 14px;
+  }
+
+  .button:hover {
+    background-color: #c2e9fb;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
+  }
+
+  #compareButton {
+    display: block;
+    margin: 30px auto;
+    font-size: 16px;
+    padding: 12px 24px;
+  }
+
+  #result {
+    margin-top: 30px;
+    padding: 20px;
+    border-radius: 10px;
+    background-color: rgba(255, 255, 255, 0.7);
+    text-align: center;
+  }
+
+  .progress-bar {
+    width: 100%;
+    height: 10px;
+    background-color: #e0e0e0;
+    border-radius: 5px;
+    margin-top: 20px;
+    overflow: hidden;
+  }
+
+  .progress {
+    width: 0;
+    height: 100%;
+    background-color: #a1c4fd;
+    transition: width 0.5s ease;
+  }
+
+  .comparison-result {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 30px;
+  }
+
+  .document-text {
+    flex: 1;
+    margin: 0 10px;
+    max-height: 500px;
+    overflow-y: auto;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 5px;
+    border: 1px solid #ced4da;
+  }
+
+  .document-text h3 {
+    margin-top: 0;
+    color: #495057;
+  }
+
+  .document-text pre {
+    white-space: pre-wrap;
+    word-wrap: break-word;
+    font-family: 'Roboto Mono', monospace;
+    font-size: 14px;
+    line-height: 1.5;
+    color: #212529;
+  }
+
+  @keyframes pulse {
+    0% {
+      transform: scale(1);
+    }
+    50% {
+      transform: scale(1.05);
+    }
+    100% {
+      transform: scale(1);
+    }
+  }
+
+  .pulse {
+    animation: pulse 1.5s infinite;
+  }
+</style>
+</head>
+<body>
+  <div class="container">
+    <h1>Enhanced Document Comparison Tool</h1>
+    <div class="dropzone-container">
+      <div id="dropzone1" class="dropzone">
+        <div class="file-icon">📄</div>
+        <p>Drag and drop the first document here</p>
+        <input type="file" id="fileInput1" accept=".txt,.doc,.docx,.pdf" style="display:none;">
+        <label for="fileInput1" class="button">Select File</label>
+      </div>
+      <div id="dropzone2" class="dropzone">
+        <div class="file-icon">📄</div>
+        <p>Drag and drop the second document here</p>
+        <input type="file" id="fileInput2" accept=".txt,.doc,.docx,.pdf" style="display:none;">
+        <label for="fileInput2" class="button">Select File</label>
+      </div>
+    </div>
+    <button id="compareButton" class="button">Compare Documents</button>
+    <div id="result"></div>
+    <div class="comparison-result">
+      <div class="document-text">
+        <h3>Document 1</h3>
+        <pre id="text1"></pre>
+      </div>
+      <div class="document-text">
+        <h3>Document 2</h3>
+        <pre id="text2"></pre>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.9.359/pdf.min.js"></script>
+  <script>
+    const dropzones = document.querySelectorAll('.dropzone');
+    const fileInputs = document.querySelectorAll('input[type="file"]');
+    const compareButton = document.getElementById('compareButton');
+    const result = document.getElementById('result');
+    const text1Element = document.getElementById('text1');
+    const text2Element = document.getElementById('text2');
+    let selectedFiles = [null, null];
+
+    dropzones.forEach((dropzone, index) => {
+      dropzone.addEventListener('click', () => {
+        fileInputs[index].click();
+      });
+
+      dropzone.addEventListener('dragover', (e) => {
+        e.preventDefault();
+        dropzone.classList.add('dragover');
+      });
+
+      dropzone.addEventListener('dragleave', () => {
+        dropzone.classList.remove('dragover');
+      });
+
+      dropzone.addEventListener('drop', (e) => {
+        e.preventDefault();
+        dropzone.classList.remove('dragover');
+        const file = e.dataTransfer.files[0];
+        handleFile(file, index);
+      });
+    });
+
+    fileInputs.forEach((input, index) => {
+      input.addEventListener('change', (e) => {
+        const file = e.target.files[0];
+        handleFile(file, index);
+      });
+    });
+
+    function handleFile(file, index) {
+      if (file) {
+        selectedFiles[index] = file;
+        dropzones[index].innerHTML = `
+          <div class="file-icon">📄</div>
+          <p>Selected: ${file.name}</p>
+          <label for="fileInput${index + 1}" class="button">Change File</label>
+        `;
+        const fileInput = document.getElementById(`fileInput${index + 1}`);
+        dropzones[index].appendChild(fileInput);
+        updateCompareButtonState();
+      }
+    }
+
+    function updateCompareButtonState() {
+      if (selectedFiles[0] && selectedFiles[1]) {
+        compareButton.classList.add('pulse');
+      } else {
+        compareButton.classList.remove('pulse');
+      }
+    }
+
+    compareButton.addEventListener('click', () => {
+      if (selectedFiles[0] && selectedFiles[1]) {
+        compareDocuments(selectedFiles[0], selectedFiles[1]);
+      } else {
+        result.innerHTML = '<p>Please select two documents to compare.</p>';
+      }
+    });
+
+    async function compareDocuments(file1, file2) {
+      result.innerHTML = `
+        <p>Comparing documents...</p>
+        <div class="progress-bar">
+          <div class="progress"></div>
+        </div>
+      `;
+      const progressBar = result.querySelector('.progress');
+
+      try {
+        const text1 = await readFileContent(file1, (progress) => {
+          progressBar.style.width = `${progress * 50}%`;
+        });
+        const text2 = await readFileContent(file2, (progress) => {
+          progressBar.style.width = `${50 + progress * 50}%`;
+        });
+        const similarity = calculateSimilarity(text1, text2);
+        result.innerHTML = `
+          <h2>Comparison Result</h2>
+          <p>Similarity: ${(similarity * 100).toFixed(2)}%</p>
+          <p>Document 1: ${file1.name}</p>
+          <p>Document 2: ${file2.name}</p>
+        `;
+
+        // Display the text content of both documents
+        text1Element.textContent = text1;
+        text2Element.textContent = text2;
+      } catch (error) {
+        result.innerHTML = `<p>Error: ${error.message}</p>`;
+      }
+    }
+
+    async function readFileContent(file, progressCallback) {
+      if (file.type === 'application/pdf') {
+        return await readPdfContent(file, progressCallback);
+      } else {
+        return await readTextContent(file, progressCallback);
+      }
+    }
+
+    function readTextContent(file, progressCallback) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          progressCallback(1);
+          resolve(e.target.result);
+        };
+        reader.onerror = (e) => reject(new Error('Error reading file'));
+        reader.onprogress = (e) => {
+          if (e.lengthComputable) {
+            progressCallback(e.loaded / e.total);
+          }
+        };
+        reader.readAsText(file);
+      });
+    }
+
+    async function readPdfContent(file, progressCallback) {
+      const arrayBuffer = await file.arrayBuffer();
+      const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+      let text = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const content = await page.getTextContent();
+        text += content.items.map(item => item.str).join(' ') + '\n';
+        progressCallback(i / pdf.numPages);
+      }
+      return text;
+    }
+
+    function calculateSimilarity(text1, text2) {
+      const words1 = text1.toLowerCase().split(/\W+/);
+      const words2 = text2.toLowerCase().split(/\W+/);
+      const set1 = new Set(words1);
+      const set2 = new Set(words2);
+      const intersection = new Set([...set1].filter(x => set2.has(x)));
+      const union = new Set([...set1, ...set2]);
+      return intersection.size / union.size;
+    }
+  </script>
+</body>
+</html>
